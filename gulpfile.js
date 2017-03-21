@@ -69,7 +69,7 @@ gulp.task('clean:ngsummary',(cb)=>{
 });
 
 gulp.task('aot', (cb)=>{
-    runsequence('ngc','rollup', ['compress', 'sorcery'], cb);
+    runsequence('ngc','rollup', 'compress', 'sorcery', cb);
 });
 
 /**
