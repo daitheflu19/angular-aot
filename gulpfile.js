@@ -80,3 +80,13 @@ gulp.task('aot:rollup',(cb)=>{
 gulp.task('aot:sorcery',(cb)=>{    
     execASync('sorcery -i '+paths.bundle, cb);
 });
+
+
+gulp.task('gh-pages', ['clean-gh-pages'],(cb)=>{    
+    return gulp.src(['index.html','{dist,src}/**/*'])
+        .pipe(gulp.dest('docs'));    
+});
+
+gulp.task('clean-gh-pages',(cb)=>{
+    rimraf('docs', cb);
+});
