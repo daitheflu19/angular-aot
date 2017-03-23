@@ -1,5 +1,5 @@
 build-aot
-dist
+./dist
 build-jit
 node_modules
 gh-pages
