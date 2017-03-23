@@ -9,8 +9,8 @@ var child_process = require('child_process');
 var sourcemaps = require('gulp-sourcemaps');
 var cleanCss = require('gulp-clean-css');
 var rename = require('gulp-rename');
-
 var paths = config.paths;
+
 
 /**
  * executes process
@@ -24,12 +24,19 @@ var execASync=function(command, cb){
 }
 
 var brotli=function(inputFilePath, cb){
-    child_process.exec(`brotli --in ${inputFilePath} --out ${inputFilePath}.br`, function (err, stdout, stderr) {
-        console.log(stdout);
-        console.log(stderr);        
-        cb(err);        
-    });    
+    // var cmd = `brotli --in ${inputFilePath} --out ${inputFilePath}.br`;
+    var cmd = 'brotli '+inputFilePath;
+    execASync(cmd, cb);
+    // child_process.exec(, function (err, stdout, stderr) {
+    //     console.log(stdout);
+    //     console.log(stderr);        
+    //     cb(err);        
+    // });    
 }
+
+gulp.task('brot', function(cb){
+    brotli('gulpfile.js', cb);
+});
 
 gulp.task('build:all',['build:aot','build:jit']);
 
