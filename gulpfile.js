@@ -3,17 +3,14 @@ var runsequence = require('run-sequence');
 var rimraf = require('rimraf');
 var sorcery = require('sorcery');
 var config = require('./config')();
-var gzip = require('gulp-gzip');
 var fs = require('fs');
 var child_process = require('child_process');
-var sourcemaps = require('gulp-sourcemaps');
-var cleanCss = require('gulp-clean-css');
-var rename = require('gulp-rename');
+
 var paths = config.paths;
 
 
 /**
- * executes process
+ * executes a process using a bin in node_modules like ngc
  */
 var execASync=function(command, cb){
     child_process.exec('.\\node_modules\\.bin\\'+command, function (err, stdout, stderr) {
@@ -23,199 +20,63 @@ var execASync=function(command, cb){
     });    
 }
 
-var brotli=function(inputFilePath, cb){
-    // var cmd = `brotli --in ${inputFilePath} --out ${inputFilePath}.br`;
-    var cmd = 'brotli '+inputFilePath;
-    execASync(cmd, cb);
-    // child_process.exec(, function (err, stdout, stderr) {
-    //     console.log(stdout);
-    //     console.log(stderr);        
-    //     cb(err);        
-    // });    
-}
-
-gulp.task('brot', function(cb){
-    brotli('gulpfile.js', cb);
-});
-
 gulp.task('build:all',['build:aot','build:jit']);
 
-gulp.task('build:aot', ['clean:aot'], function(cb){
-    runsequence(['polyfils', 'css:dist', 'aot'], cb);
+gulp.task('build:aot', function(cb){
+    runsequence('aot:clean', ['aot:polyfils', 'aot:css', 'aot:sequence'], cb);
 });
 
 gulp.task('build:jit', function(cb){
-    runsequence('clean:jit',['staticfiles','tsc'], cb);
+    runsequence('jit:clean',['jit:staticfiles','jit:tsc'], cb);
 });
 
 /**
- * Compilation 'classique' des typescript en javascript.
- * Utile en DEV car la compilation est très rapide.
+ * JIT build tasks
  */
-gulp.task('tsc',(cb)=>{    
+gulp.task('jit:tsc',(cb)=>{    
     execASync(`tsc -p ${paths.tsconfig}`, cb);
 });
-
-gulp.task('staticfiles', function (cb) {
+gulp.task('jit:staticfiles', function (cb) {
     return gulp.src([paths.html, paths.css])
         .pipe(gulp.dest(paths.jitBuild));
 });
-
-gulp.task('clean:jit',(cb)=>{
+gulp.task('jit:clean',(cb)=>{
     rimraf(paths.jitBuild, cb);
 });
 
-gulp.task('clean:aot',(cb)=>{
+/**
+ * AOT build tasks
+ */
+gulp.task('aot:clean',(cb)=>{
     var folders = `{${paths.dist},${paths.aotBuild}}`;
     // console.log(folders);
     rimraf(folders, cb);
 });
-
-gulp.task('clean:ngsummary',(cb)=>{
-    rimraf('./**/*ngsummary*.*', cb);
+gulp.task('aot:polyfils', function(cb){    
+ return gulp.src(paths.polyfilsSrc)        
+        .pipe(gulp.dest(paths.polyfilsDist));
 });
-
-gulp.task('aot', (cb)=>{
-    runsequence('ngc','rollup', 'compress', 'sorcery', cb);
+gulp.task('aot:css', function(cb){    
+    return gulp.src(paths.styles)
+        .pipe(gulp.dest(paths.dist));
 });
 
 /**
- * Build PROD : Etape 1
- * Compilation AOT à l'aide de ngc (@angular/compiler-cli)
- * Génère les fichier *.ngfactory.js
+ * Build sequence : 
+ * - ngc        => AOT compilation
+ * - rollup     => bundling and tree shaking 
+ * - sorcery    => to have sourcemap pointing to TS source
  */
-gulp.task('ngc', (cb) => {
+gulp.task('aot:sequence', (cb)=>{
+    runsequence('aot:ngc','aot:rollup', 'aot:sorcery', cb);
+});
+
+gulp.task('aot:ngc', (cb) => {
     execASync(`ngc -p ${paths.ngcconfig}`, cb);
 });
-
-/**
- * Build PROD : Etape 2
- * Crée le bundle final (build.js) à partir des fichiers compilés par ngc (fichiers *.ngfactory.js)
- */
-gulp.task('rollup',(cb)=>{
+gulp.task('aot:rollup',(cb)=>{
     execASync(`rollup -c ${paths.rollupconfig}`, cb);
 });
-var dirtree = function(dir, regex, filelist) {  
-  files = fs.readdirSync(dir);  
-  filelist = filelist || [];
-  files.forEach(function(file) {
-    if (fs.statSync(dir + '/' + file).isDirectory()) {
-        filelist.concat(dirtree(dir + '/' + file,regex, filelist));
-    }
-    else if(file.match(regex)){
-        filelist.push(dir + '/' + file);      
-    }
-  });
-  return filelist;
-};
-
-gulp.task('dir', function(cb){
-    var files = dirtree('dist',/\.js$|\.css$/i);
-    console.log(files);
-    cb();
-})
-
-
-/**
- * Build PROD : Etape 3
- * Permet de reconstituer la chaine des fichiers de mapping (le build.js.map pointe vers les ngfactory de ngc)
- * build.js.map => fichiers typescript du dossier src
- */
-gulp.task('sorcery',(cb)=>{
-    var chain = sorcery.loadSync(paths.bundle);
-    chain.writeSync();
-    cb();
-});
-
-/**
- * Build PROD : Etape 4
- * Compression des fichiers 
- */
-gulp.task('compress', ['brotli','gzip']);
-
-gulp.task('gzip', function(cb){      
-    return gulp.src(paths.dist + '**/*.+(css|js)')
-        .pipe(gzip())
-        .pipe(gulp.dest(paths.dist));
-});
-
-gulp.task('brotli', function(cb){
-    var items = dirtree(paths.dist, /\.css$|\.js$/);
-    var nbCallbacks=0
-     var callbax= function(){
-        nbCallbacks++;                
-        if(nbCallbacks >= items.length){                    
-            cb();
-        }
-    }
-    for (var i=0; i<items.length; i++) {            
-        brotli(items[i], callbax);        
-    }
-});
-
-
-/**
- * css 
- */
-gulp.task('css:dist', function(cb){
-    return gulp.src(paths.styles)
-        .pipe(sourcemaps.init())
-        .pipe(cleanCss())
-        .pipe(rename({
-            suffix: '.min'
-        }))
-        .pipe(sourcemaps.write('.'))        
-        .pipe(gulp.dest(paths.dist));
-});
-
-/**
- * Les taches polyfils:* seront déplacées dans Corporate.Angular
- * Ces fichiers doivent être récupérés depuis le CDN.
- */
-
-gulp.task('polyfils',function(cb){
-    runsequence('polyfils:clean','polyfils:copy','polyfils:compress', cb);
-});
-
-gulp.task('polyfils:clean', function(cb){
-    rimraf(paths.polyfils, cb);
-});
-
-gulp.task('polyfils:compress', ['polyfils:gzip','polyfils:brotli']);
-
-gulp.task('polyfils:gzip', function(cb){  
-    return gulp.src(paths.polyfils+'*.js')
-        .pipe(gzip())
-        .pipe(gulp.dest(paths.polyfils));
-});
-
-
-gulp.task('polyfils:brotli', ['polyfils:clean:brotli'], function(cb){
-    fs.readdir(paths.polyfils, function(err, items) {
-        if(items){
-            var nbItems = 0;
-            var nbCallbacks =0;
-            var cbz= function(){
-                nbCallbacks++;                
-                if(nbCallbacks >= nbItems){                    
-                    cb();
-                }
-            }
-            for (var i=0; i<items.length; i++) {
-                if(items[i] && items[i].match(/\.js$|\.css$/)){
-                    nbItems ++;
-                    brotli(paths.polyfils+items[i], cbz);
-                }
-            }
-        }
-    });
-});
-
-gulp.task('polyfils:clean:brotli', function(cb){
-    rimraf(paths.polyfils + '*.br', cb);    
-});
-
-gulp.task('polyfils:copy', function(cb){    
- return gulp.src(paths.polyfilsSrc)        
-        .pipe(gulp.dest(paths.polyfils));
+gulp.task('aot:sorcery',(cb)=>{    
+    execASync('sorcery -i '+paths.bundle, cb);
 });

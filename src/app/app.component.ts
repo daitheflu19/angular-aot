@@ -9,7 +9,7 @@ import { VERSION } from '@angular/common';
 export class AppComponent {
   version:string;
   showHeading = true;
-  heroes = ['Magneta', 'Bombasto', 'Magma', 'Tornado'];
+  heroes = ['Magneta', 'Bombasto', 'Magma', 'Tornado', 'Toto'];
   constructor(){    
     this.version = VERSION.full;
     console.log(VERSION);

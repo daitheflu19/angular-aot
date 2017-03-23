@@ -7,12 +7,12 @@ module.exports = function () {
         polyfilsSrc: ['node_modules/core-js/client/shim.min.js','node_modules/zone.js/dist/zone.min.js']        
     };  
     
-    paths.polyfils = paths.dist + 'polyfils/';
+    paths.polyfilsDist = paths.dist + 'polyfils/';
 
     paths.app = paths.src + 'app/';
-
-    paths.html = paths.app + '/**/*.html';
-    paths.css = paths.app + '/**/*.css';
+        
+    paths.html = paths.src + '/**/*.html';
+    paths.css = paths.src + '/**/*.css';
     paths.styles = paths.src + 'styles.css';
 
     paths.bundle = paths.dist + 'bundle.min.js';
