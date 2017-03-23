@@ -82,11 +82,11 @@ gulp.task('aot:sorcery',(cb)=>{
 });
 
 
-gulp.task('gh-pages', ['clean-gh-pages'],(cb)=>{    
+gulp.task('github-pages', ['clean-github-pages'],(cb)=>{    
     return gulp.src(['index.html','{dist,src}/**/*'])
         .pipe(gulp.dest('docs'));    
 });
 
-gulp.task('clean-gh-pages',(cb)=>{
+gulp.task('clean-github-pages',(cb)=>{
     rimraf('docs', cb);
 });
