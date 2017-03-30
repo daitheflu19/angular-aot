@@ -1,7 +1,6 @@
 var gulp = require("gulp");
 var runsequence = require('run-sequence');
 var rimraf = require('rimraf');
-var sorcery = require('sorcery');
 var config = require('./config')();
 var fs = require('fs');
 var child_process = require('child_process');
@@ -65,10 +64,9 @@ gulp.task('aot:css', function(cb){
  * Build sequence : 
  * - ngc        => AOT compilation
  * - rollup     => bundling and tree shaking 
- * - sorcery    => to have sourcemap pointing to TS source
  */
 gulp.task('aot:sequence', (cb)=>{
-    runsequence('aot:ngc','aot:rollup', 'aot:sorcery', cb);
+    runsequence('aot:ngc','aot:rollup', cb);
 });
 
 gulp.task('aot:ngc', (cb) => {
@@ -77,10 +75,6 @@ gulp.task('aot:ngc', (cb) => {
 gulp.task('aot:rollup',(cb)=>{
     execASync(`rollup -c ${paths.rollupconfig}`, cb);
 });
-gulp.task('aot:sorcery',(cb)=>{    
-    execASync('sorcery -i '+paths.bundle, cb);
-});
-
 
 gulp.task('github-pages', ['clean-github-pages'],(cb)=>{    
     return gulp.src(['index.html','{dist,src}/**/*'])

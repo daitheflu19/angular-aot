@@ -2,7 +2,10 @@ import rollup      from 'rollup'
 import nodeResolve from 'rollup-plugin-node-resolve'
 import commonjs    from 'rollup-plugin-commonjs';
 import uglify      from 'rollup-plugin-uglify'
+import sourcemaps from 'rollup-plugin-sourcemaps';
+
 var config = require('./config')();
+
 
 
 export default {
@@ -30,6 +33,7 @@ export default {
         compress:{
           drop_debugger:false
         }
-      })
+      }),
+      sourcemaps()
   ]
 }
